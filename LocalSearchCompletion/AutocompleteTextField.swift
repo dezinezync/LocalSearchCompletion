@@ -32,6 +32,7 @@ class AutocompleteTextField: NSTextField {
         didSet {
             
             if matches.count > 0 {
+               let _ = self.window {
                 let index = 0
                 autoCompleteTableView?.reloadData()
                 autoCompleteTableView?.scrollRowToVisible(index)
@@ -189,6 +190,10 @@ extension AutocompleteTextField: NSPopoverDelegate {
         guard let popover = notification.object as? NSPopover,
               let autoCompleteTableView = autoCompleteTableView else {
             return
+        }
+        
+        if popoverWidthMatchesTextField {
+            popoverWidth = bounds.width
         }
         
         let numberOfRows = min(autoCompleteTableView.numberOfRows, maxResults)
