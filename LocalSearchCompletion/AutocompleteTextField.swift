@@ -31,8 +31,9 @@ class AutocompleteTextField: NSTextField {
     var matches: [Any] = [] {
         didSet {
             
-            if matches.count > 0 {
-               let _ = self.window {
+            if matches.count > 0,
+               let window = self.window,
+               ((window.firstResponder as? NSText)?.delegate as? NSTextField) == self {
                 let index = 0
                 autoCompleteTableView?.reloadData()
                 autoCompleteTableView?.scrollRowToVisible(index)
@@ -70,6 +71,8 @@ class AutocompleteTextField: NSTextField {
         tableView.refusesFirstResponder = true
         tableView.target = self
         tableView.doubleAction = #selector(insert(_:))
+        tableView.usesAutomaticRowHeights = true
+        tableView.style = .inset
         
         tableView.addTableColumn(column1)
         tableView.delegate = self
@@ -90,7 +93,7 @@ class AutocompleteTextField: NSTextField {
         contentViewController.view = contentView
         
         let popover = NSPopover()
-        popover.appearance = NSAppearance(named: NSAppearance.Name.vibrantLight)
+        popover.behavior = .semitransient
         popover.animates = false
         popover.contentViewController = contentViewController
         popover.delegate = self
@@ -122,6 +125,19 @@ class AutocompleteTextField: NSTextField {
             return true
         }
 
+        return false
+        
+    }
+    
+    override func resignFirstResponder() -> Bool {
+        
+        if super.resignFirstResponder() == true {
+            if autoCompletePopover?.isShown ?? false {
+                autoCompletePopover!.close()
+            }
+            return true
+        }
+        
         return false
         
     }
@@ -221,6 +237,8 @@ extension AutocompleteTextField : NSTableViewDataSource {
     
 }
 
+private let cellIdentifier = NSUserInterfaceItemIdentifier("autocompleteTableViewCell")
+
 // MARK: - NSTableViewDelegate
 extension AutocompleteTextField : NSTableViewDelegate {
     
@@ -230,7 +248,7 @@ extension AutocompleteTextField : NSTableViewDelegate {
     
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         
-        var cellView = tableView.makeView(withIdentifier: NSUserInterfaceItemIdentifier("autocompleteTableViewCell"), owner: self) as? NSTableCellView
+        var cellView = tableView.makeView(withIdentifier: cellIdentifier, owner: self) as? NSTableCellView
         
         if cellView == nil {
             
@@ -242,19 +260,20 @@ extension AutocompleteTextField : NSTableViewDelegate {
             textField.isEditable = false
             textField.isSelectable = false
             textField.translatesAutoresizingMaskIntoConstraints = false
-            textField.cell?.lineBreakMode = .byTruncatingTail
-            textField.cell?.truncatesLastVisibleLine = true
+            
+            textField.setContentCompressionResistancePriority(.init(rawValue: 999), for: .vertical)
             
             cellView!.addSubview(textField)
             cellView!.textField = textField
             
-            cellView!.identifier = NSUserInterfaceItemIdentifier("autocompleteTableViewCell")
+            cellView!.identifier = cellIdentifier
             
             NSLayoutConstraint.activate([
                 textField.heightAnchor.constraint(equalToConstant: 16),
                 textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor),
-                textField.centerYAnchor.constraint(equalTo: cellView!.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor)
+                textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor),
+                textField.topAnchor.constraint(equalTo: cellView!.topAnchor, constant: 4),
+                textField.bottomAnchor.constraint(equalTo: cellView!.bottomAnchor, constant: -4)
             ])
             
         }
